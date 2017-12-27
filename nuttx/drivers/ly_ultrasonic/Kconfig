@@ -1,0 +1,30 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config  ULTRA_SONIC_NUTTX
+        bool "ultrasonic_nuttx"
+        default y
+	---help---
+                Enable the ultra_sonic driver
+
+if ULTRA_SONIC_NUTTX
+
+config ULTRA_SONIC_NUTTX_PROGNAME
+	string "Program name"
+        default "ultrasonic_nuttx"
+	depends on BUILD_KERNEL
+	---help---
+		This is the name of the program that will be use when the NSH ELF
+		program is installed.
+
+config ULTRA_SONIC_NUTTX_PRIORITY
+        int "ultrasonic_nuttx task priority"
+	default 100
+
+config ULTRA_SONIC_NUTTX_STACKSIZE
+        int "ultrasonic_nuttx stack size"
+	default 2048
+
+endif

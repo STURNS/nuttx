@@ -1,0 +1,10 @@
+#ifndef ULTRA_SONIC_SPI_H
+#define ULTRA_SONIC_SPI_H
+
+#include <nuttx/config.h>
+#include <nuttx/spi/spi.h>
+
+
+
+#endif // ULTRA_SONIC_SPI_H
+
