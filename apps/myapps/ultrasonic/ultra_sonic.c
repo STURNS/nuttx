@@ -49,6 +49,8 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <sys/time.h>
+
 #include <nuttx/wdog.h>
 
 #include <nuttx/ly_ultrasonic/ultra_sonic_nuttx.h>
@@ -90,6 +92,9 @@ wdentry_t cycle(int arg);
  ****************************************************************************/
 int ultra_sonic_main(int argc, char *argv[])
 {
+
+    struct timeval tic,toc;
+
     ultrasonic_spi_stm32_initialized();
 
      /* do opreation */
@@ -108,9 +113,8 @@ int ultra_sonic_main(int argc, char *argv[])
     //cmd = atoi(argv[2]);
     while(1)
     {
-        write(fd,buf,1);
-        printf("%d\n",counter);
 
+        write(fd,buf,1);
         sleep(1);
     }
 
@@ -127,8 +131,6 @@ int ultra_sonic_main(int argc, char *argv[])
 wdentry_t cycle(int arg)
 {
     //read(fd,buf,1);
-    counter ++;
-    printf("cycle\n");
     wd_start(wid, uls_sec_period, cycle, 0);
 
     return 0;

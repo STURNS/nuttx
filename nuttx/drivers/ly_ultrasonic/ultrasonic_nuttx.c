@@ -66,7 +66,7 @@ struct ultrasonic_dev_s{
   FAR struct spi_dev_s *spi;   /* SPI bus*/
   FAR ultrasonic_cfg_s *config;    /*config callback fuctions*/
 
-  sem_t sem_tx;
+  sem_t sem_echo;
   bool ce_enabled;          /* Cache the value of CE pin */
 
   uint8_t nopens;           /* Number of times the device has been opened */
@@ -79,6 +79,8 @@ struct ultrasonic_dev_s{
 
     struct timeval echo_begin;
     struct timeval echo_end;
+    uint32_t inteval;
+    bool trig_on;
 
 };
 
@@ -214,23 +216,36 @@ static inline void ultrasonic_deselect(struct ultrasonic_dev_s * dev)
  * @param context
  * @return
  */
+int irq_count=0;
 bool led_state = false;
 static int ultrasonic_irqhandler(int irq, FAR void *context)
 {
-  FAR struct ultrasonic_dev_s *dev = g_ultrasonic_dev;
+    FAR struct ultrasonic_dev_s *dev = g_ultrasonic_dev;
+
+    if(dev->trig_on)
+    {
+        dev->trig_on = false;
+
+        //  _info("*IRQ*");
+        led_state = !led_state;
+        g_ultrasonic_dev->config->toggol(led_state);
+
+        //tic toc
+        gettimeofday(&dev->echo_end,NULL);
+        dev->inteval = (dev->echo_end.tv_sec - dev->echo_begin.tv_sec)*1000000UL
+               + dev->echo_end.tv_usec -dev->echo_begin.tv_usec;
+        if(dev->inteval > 100)
+        {
+            /* Otherwise we simply wake up the send function */
+            sem_post(&dev->sem_echo);  /* Wake up the send function */
+        }
+
+    }
 
 
-//  _info("*IRQ*");
-    gettimeofday(&dev->echo_end,NULL);
 
 
-  led_state = !led_state;
-  g_ultrasonic_dev->config->toggol(led_state);
-  /* Otherwise we simply wake up the send function */
-  sem_post(&dev->sem_tx);  /* Wake up the send function */
-
-
-  return OK;
+    return OK;
 }
 
 
@@ -411,20 +426,18 @@ static ssize_t ultrasonic_write(FAR struct file *filep, FAR const char *buffer, 
 
     /* trig pin raise up an edge for at least 10us*/
     dev->config->trigonce();
-    gettimeofday(&dev->echo_begin,NULL);
+    dev->trig_on = ~false;
 
-    sem_post(&dev->devsem);
+    gettimeofday(&dev->echo_begin,NULL);
 
 
     /* wait for irq */
-    while(sem_wait(&dev->sem_tx) !=0)
-    {
+    while(sem_wait(&dev->sem_echo) != 0);
 
-    }
+    printf("%d\n",dev->inteval);
 
-
-    printf("%d\n",dev->echo_end.tv_usec- dev->echo_begin.tv_usec);
-
+    //release the dev
+    sem_post(&dev->devsem);
     return ret;
 }
 
@@ -499,8 +512,8 @@ int ultrasonic_register(FAR struct spi_dev_s *spi, FAR ultrasonic_cfg_s *cfg)
   dev->pfd = NULL;
 #endif
 
-  sem_init(&dev->sem_tx, 0, 0);
-  sem_setprotocol(&dev->sem_tx, SEM_PRIO_NONE);
+  sem_init(&dev->sem_echo, 0, 0);
+  sem_setprotocol(&dev->sem_echo, SEM_PRIO_NONE);
 
   /* Set the global reference */
 
